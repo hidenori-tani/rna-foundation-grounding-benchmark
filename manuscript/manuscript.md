@@ -444,10 +444,15 @@ this sample size and are treated as a limitation.
 Annotation (GENCODE v44 human, vM33 mouse) and the half-life ground-truth
 datasets are publicly available (BRIC-seq: DDBJ DRA000345–350, DRA000357–361;
 SLAM-seq: GEO GSE99978; TimeLapse-seq: GEO GSE95854). Model weights follow each
-model's original repository. Benchmark scripts, processed embeddings with fold
-assignments, and figure generators are available to editors and peer reviewers
-on request during assessment, and will be deposited in a public Zenodo archive
-with a citable DOI on acceptance.
+model's original repository. The Phase 1 data pipeline, Phase 2 benchmark
+scripts (CPU-proxy and GPU notebooks), processed test set, embeddings,
+evaluation outputs, and figure generators are openly available at
+https://github.com/hidenori-tani/rna-foundation-grounding-benchmark and
+archived on Zenodo at https://doi.org/10.5281/zenodo.19679759 under an MIT
+(code) and CC BY 4.0 (data and figures) dual licence. The repository includes
+a top-level `reproduce.sh` that regenerates the full CPU-proxy pipeline
+(~45 min on a laptop) end-to-end; Colab notebooks under `benchmark/colab/`
+replicate the GPU results for RiNALMo-650M, Evo-7B, and RhoFold+.
 
 ## Acknowledgements
 
