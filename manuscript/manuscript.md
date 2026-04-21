@@ -13,19 +13,19 @@ ORCID: 0000-0001-6390-4136
 
 Long non-coding RNAs outnumber protein-coding genes yet remain functionally
 opaque, and RNA foundation models promise to read function from sequence.
-Using measured half-life as one axis, we benchmark five representation
-classes — two directly (RNA-FM, DeepLncLoc), three via non-parametric
-proxies — on 256 lncRNAs across four cell systems (116 classifiable under
-gene-disjoint folds). In this deliberately small setting, no representation
-exceeded AUROC 0.70 or supported robust regression, and performance on
-dynamically regulated transcripts was systematically weak. We interpret this
-converging ceiling as a testable hypothesis — an *observability gap* between
-static pretraining and the dynamic cellular state defining lncRNA function —
-not a settled finding. We propose *dynamic grounding*: a model-agnostic
-post-hoc layer conditioning static predictions in one cell system on
-turnover and localisation priors measured in independent systems, and
-advocate a tiered static × dynamic evaluation standard for foundation models
-whose labels depend on unobserved state.
+Using measured half-life as one axis, we benchmark 256 lncRNAs across four
+cell systems (116 classifiable under gene-disjoint folds) on two directly
+evaluated representations (RNA-FM, DeepLncLoc) and three CPU-feasible
+proxies for RiNALMo-650M, Evo-7B and RhoFold+. Under these proxy conditions no representation's mean AUROC
+exceeded 0.70, regression was near chance, and dynamically regulated
+transcripts were systematically harder. We read this ceiling as a testable
+*observability-gap hypothesis* — a proposed mismatch between static
+pretraining and dynamic cellular state — not an established property of
+foundation models at full scale. On that framing we introduce *dynamic
+grounding*, a model-agnostic post-hoc layer conditioning predictions on
+turnover and localisation priors from independent cell systems, as a
+not-yet-validated framework, and sketch a tiered static × dynamic
+evaluation practice for testing it.
 
 ---
 
@@ -65,17 +65,20 @@ The dynamic axes on which lncRNA function most clearly depends — transcript
 turnover, subcellular localisation, condition-specific induction — are measurable
 properties of the cellular state, not properties of the sequence, and they are
 systematically absent from the pretraining corpora that modern RNA foundation
-models learn from. We refer to this as an *observability gap*: a systematic
-mismatch between the variables observable at pretraining time and the variables
-that determine downstream evaluation labels. Under such a mismatch, increasing
-model capacity without enlarging the observed-variable set cannot recover the
-missing signal. On that framing, this Perspective makes three connected
-proposals: (i) observability gaps should be stated explicitly in foundation-model
-documentation and benchmarking practice; (ii) *dynamic grounding* — post-hoc
-conditioning on orthogonal measured state variables — is a natural mitigation
-that does not require retraining; and (iii) a tiered static × dynamic evaluation
-standard should become a minimum bar when evaluation labels depend on unobserved
-state.
+models learn from. We refer to this tentatively as an *observability-gap hypothesis*: a proposed
+systematic mismatch between the variables observable at pretraining time and
+the variables that determine downstream evaluation labels. If such a mismatch
+holds, increasing model capacity without enlarging the observed-variable set
+would not be expected to recover the missing signal. On that framing, this
+Perspective puts forward three connected *testable* hypotheses: (i)
+observability gaps, where present, are worth stating explicitly in
+foundation-model documentation and benchmarking; (ii) *dynamic grounding* —
+post-hoc conditioning on orthogonal measured state variables — is a
+candidate mitigation that does not require retraining; and (iii) a tiered
+static × dynamic evaluation practice is worth testing when evaluation labels
+depend on unobserved state. We stress that the empirical base here is a
+small, proxy-heavy benchmark; the scope of each hypothesis is framed
+accordingly.
 
 The empirical scope of this Perspective is deliberately narrow: lncRNA *stability*
 measured by half-life, as a single functional axis on which the argument can be
@@ -171,11 +174,17 @@ RNA-FM MLP (0.672 ± 0.127) and the Evo-class proxy (ERNIE-RNA) MLP (0.655 ± 0.
 leading combinations fall within approximately one standard deviation of each other
 and their bootstrap 95% confidence intervals overlap substantially; we therefore read
 them as performing similarly within the variance of this benchmark rather than as a
-strict ranking. No tested representation exceeded AUROC 0.70 under our evaluation
+strict ranking. No tested representation's mean AUROC exceeded 0.70 under our evaluation
 setting — a level we adopt here as an informal usefulness threshold, consistent
-with recent independent RNA foundation-model comparisons^13^. Taken together, these results suggest that under the
-conditions tested, scaling or swapping among sequence-only representations is
-insufficient to overcome a shared ceiling in lncRNA half-life classification.
+with recent independent RNA foundation-model comparisons^13^; per-fold
+variance is large (SD 0.08–0.15) and individual fold estimates do at times
+cross this threshold, so 0.70 should be read as a central-tendency
+reference, not a hard ceiling. Taken together, these results suggest that
+under the specific CPU-proxy conditions tested, scaling or swapping among
+sequence-only representations was not sufficient to overcome a shared
+ceiling in lncRNA half-life classification in this benchmark; whether
+full-weight GPU replication of RiNALMo-650M or Evo-7B lifts this ceiling
+remains an open empirical question that the proxy benchmark cannot close.
 
 **Continuous half-life regression is near chance.** Predicting log₂(half-life) in
 hours as a continuous variable against the full 256-sequence set, the best single
@@ -237,24 +246,32 @@ representation uniformly.
 
 ---
 
-## Dynamic grounding: closing the observability gap
+## Dynamic grounding: a testable response to the observability-gap hypothesis
 
-Together, the consensus failure, the k-mer-competitive ceiling and the near-chance
-regression point to a shared missing ingredient: the dynamic state of the cell.
-Every representation tested is pretrained on a frozen transcriptome snapshot without
-kinetic, subcellular or condition-dependent annotation. The relevant state variables
+Together, the consensus failure, the k-mer-competitive ceiling and the
+near-chance regression are consistent with — though not proof of — a
+shared missing ingredient: the dynamic state of the cell. Every
+representation tested here is pretrained on a frozen transcriptome snapshot
+without kinetic, subcellular or condition-dependent annotation, which makes
+the observability-gap reading a natural interpretation of the pattern; but
+comparable ceilings could in principle arise from sample-size limits, label
+noise across assays, or proxy mismatch, and those alternatives are not ruled
+out by this benchmark. The relevant state variables
 are themselves measurable — RNA turnover at transcriptome scale by BRIC-seq^10^,
 SLAM-seq^11^ and TimeLapse-seq^12^; subcellular localisation by CeFra-seq^17^ and
 APEX-seq^18^ — and the field has already collected them. What is missing is a
 principled way to connect them back to models that were never exposed to them.
 
-Viewed as a machine-learning problem, this is a specific instance of a more general
-pattern: a pretrained representation *r(x)* is evaluated on a label *y* that depends
-not on *x* alone but on *(x, z)*, where *z* is an orthogonal state variable never
-seen at pretraining time. Scaling *r* cannot recover what *z* carries; conditioning
-*r* on a measured *z* can. We call the resulting procedure *dynamic grounding*: a
-model-agnostic post-hoc conditioning of static foundation-model predictions on
-measured state variables that capture the axes the pretraining corpus leaves out.
+Viewed as a machine-learning problem, this fits a more general pattern: a
+pretrained representation *r(x)* is evaluated on a label *y* that depends
+not on *x* alone but on *(x, z)*, where *z* is an orthogonal state variable
+never seen at pretraining time. Scaling *r* would not be expected to recover
+what *z* carries; conditioning *r* on a measured *z* could, at least in
+principle. We call the resulting candidate procedure *dynamic grounding*: a
+model-agnostic post-hoc conditioning of static foundation-model predictions
+on measured state variables that capture axes the pretraining corpus leaves
+out. Whether grounding delivers the expected gain on held-out tasks is a
+testable prediction rather than a result of the present Perspective.
 
 For the lncRNA half-life setting, this specialises to the tiered construction
 sketched in Fig. 5. The top tier is the static model output, preserved as-is. The
@@ -265,21 +282,23 @@ stable-cytoplasmic, unstable-nuclear, unstable-cytoplasmic, intermediate). The
 grounding layer is model-agnostic: it can be applied to any of the five
 representation classes evaluated here, or to any future sequence model, without
 retraining the underlying weights. A minimal implementable prototype (Box 2)
-requires only published resources and a single calibration step, and is therefore
-immediately actionable — no new data, no new training runs, no privileged access to
-foundation-model weights.
+requires only published resources and a single calibration step; its
+empirical gain over the ungrounded baseline is a prediction the framework
+makes, not a result this Perspective establishes.
 
-Dynamic grounding also implies a corresponding change in how models should be
-evaluated. We propose a **tiered, observability-aware evaluation standard** with two
-axes. The *static axis* tests raw model output against sequence-only ground truth —
-the current default. The *dynamic axis* tests calibrated output against turnover and
-localisation ground truth — the standard this Perspective argues must now be adopted.
-A representation that performs well on the static axis but degrades on the dynamic
-axis is exposed as sequence-saturating; one that performs on both is biology-aware.
-Under this standard, every representation class benchmarked here would be classified
-as static-axis only. The same framing extends naturally beyond lncRNAs: any
-foundation model evaluated on a label that depends on an unobserved state variable
-should, in principle, be benchmarked on both axes.
+Dynamic grounding also suggests a corresponding change in how models might be
+evaluated. We propose — as a testable practice rather than an enforced
+standard — a **tiered, observability-aware evaluation framing** with two
+axes. The *static axis* tests raw model output against sequence-only ground
+truth, the current default. The *dynamic axis* tests calibrated output
+against turnover and localisation ground truth. A representation that
+performs well on the static axis but degrades on the dynamic axis would be
+exposed as sequence-saturating under this framing; one that performs on both
+would be biology-aware. Under this framing, every representation class
+benchmarked here would be classified as static-axis only, although that
+classification is conditional on the CPU-proxy setting of the present
+benchmark. The same framing could in principle extend beyond lncRNAs, which
+we flag as a testable generalisation rather than an established property.
 
 **Why not retrain, fine-tune, or scale?** Three natural objections deserve
 explicit replies. *Retraining.* The most direct response to an observability
@@ -346,28 +365,29 @@ functional-family leakage. Third, the ground-truth half-life datasets differ in
 chemistry and cell system; per-cell calibration reduces but does not eliminate batch
 effects.
 
-Against those caveats, two readings are supported both by this benchmark and by
-independent RNA foundation-model comparisons^13^. First, static sequence-only
+Against those caveats, two tentative readings are consistent with this
+benchmark and with independent RNA foundation-model comparisons^13^. First,
+under the CPU-proxy conditions tested here, static sequence-only
 representations — whether evaluated directly or via proxy — did not support
-robust lncRNA half-life prediction under the conditions tested, motivating
-tests of whether dynamic measurements add information that pretraining does not
+robust lncRNA half-life prediction, motivating direct tests at full scale of
+whether dynamic measurements add information that pretraining does not
 recover. Second, the field already has those measurements: transcriptome-wide
 turnover^10–12^ and localisation^17,18^ are publicly available, and dynamic
-grounding (Fig. 5, Box 2) provides a concrete, retraining-free route to bring
-them into contact with existing foundation-model outputs. Building
-biology-grounded RNA foundation models will eventually require pretraining
-corpora with kinetic and spatial annotation as first-class supervision, but the
-tiered, observability-aware evaluation standard argued for here can be adopted
-today on existing models and data.
+grounding (Fig. 5, Box 2) sketches a concrete, retraining-free route to
+bring them into contact with existing foundation-model outputs; whether
+grounding actually closes the observed ceiling is the central empirical
+question it poses, not a conclusion reached here.
 
-More broadly, the pattern we document — a static-axis ceiling accompanied by
-systematic weakness on dynamically regulated substrates — is unlikely to be
-specific to lncRNA stability. Analogous dynamic axes (ribosome occupancy
-kinetics, chromatin-state half-life, splicing response times) are measurable but
+We flag a broader possibility — speculative at this evidence scale — that
+the pattern documented here, a static-axis ceiling accompanied by systematic
+weakness on dynamically regulated substrates, might not be specific to
+lncRNA stability. Analogous dynamic axes (ribosome occupancy kinetics,
+chromatin-state half-life, splicing response times) are measurable but
 similarly absent from the current generation of foundation-model training
-corpora. We offer the tiered evaluation standard as a common baseline for the
-RNA and machine-learning communities, and as a testable template for any
-foundation model whose evaluation labels depend on unobserved state.
+corpora. We therefore offer the tiered evaluation framing as a testable
+template — not a recommended community standard — for any foundation model
+whose evaluation labels depend on unobserved state, with validation of the
+framing itself as the central follow-up work.
 
 ---
 
@@ -529,10 +549,13 @@ one of the five representation classes under gene-disjoint 5-fold stratified
 cross-validation.
 
 **Figure 5.** Dynamic grounding framework: static prediction → dynamic constraint
-(turnover + localisation priors) → biology-aware calibrated output. Worked example:
-*NORAD* (cytoplasmic, stress-responsive, a consensus-failure transcript under
-static-only evaluation). The grounding layer is model-agnostic and compatible with
-any existing sequence-only RNA foundation model.
+(turnover + localisation priors) → biology-aware calibrated output.
+Illustrative case (not a validated performance claim): *NORAD* (cytoplasmic,
+stress-responsive, a consensus-failure transcript under static-only
+evaluation), sketching how the grounding layer would act on a representative
+transcript from the 12-transcript hypothesis-generating set. The grounding
+layer is model-agnostic in construction, and its quantitative benefit over
+the ungrounded baseline is a principal direction for future work.
 
 ## Table legends
 
