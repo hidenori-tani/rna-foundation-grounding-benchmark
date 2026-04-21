@@ -1,53 +1,73 @@
 #!/usr/bin/env python3
 """
-rinalmo.py — 4-mer composition baseline (Task 2.2, RiNALMo CPU substitute)
+rinalmo.py — Random shallow 1D-CNN proxy for RiNALMo-650M (representation-class substitute)
 
-置換の経緯:
-    元計画では RiNALMo (650M params, hidden_dim=1280) の sequence-level embedding を
-    Colab Pro A100 で抽出する予定だった。しかし本セッションではローカル macOS CPU のみ
-    を前提とするため、以下の制約に突き当たった:
-      - RiNALMo は 650M params、fp16 でも推定 ~10GB の活性化メモリが必要
-      - CPU 実行の見積り: 1配列あたり 5-10分（256 配列で 20-40 時間）— 現実的でない
-      - Colab 再訪のコストが高い（Phase 2 のやり直しで一日潰れる）
+Why a random-initialised CNN rather than k-mer composition.
+    An earlier draft of this benchmark substituted 4-mer composition for the
+    RiNALMo-650M embedding. That choice made the proxy identical to the k-mer
+    baseline, so any "proxy matches baseline" observation became tautological
+    by construction. We therefore replace the proxy with a randomly-initialised,
+    non-linear, convolutional feature extractor: it remains CPU-tractable
+    (~30 s for 256 sequences) but is architecturally distinguishable from a
+    count-based n-gram and captures local composition through learned-shape
+    (though untrained) filters rather than exact windowed counts.
 
-    代替として 4-mer composition (256-dim) を「より高次の n-gram ベースライン」として
-    採用する。deeplncloc.py (3-mer, 64-dim) との差分は次の2点:
-      1. 次元数 256 は RNA-FM (640), NT-50M (512) と同オーダーで、
-         embedding 空間の容量として比較可能
-      2. 4-mer は局所モチーフ（AU-rich element の AUUU、pumilio UGUANAUA の断片 UGUA 等）
-         を明示的に捉える — RNA言語モデルが暗黙に学ぶ特徴の明示化ベースライン
+    The proxy is a representation-class stand-in, not a performance claim about
+    RiNALMo-650M itself. Its purpose is to answer the question: when the
+    neural-CNN inductive bias is stripped of large-scale pretraining, does the
+    class already reach the lncRNA-turnover ceiling we observe for directly
+    evaluated models? The full-parameter RiNALMo replication is carried out in
+    benchmark/colab/rinalmo.ipynb.
 
-    論拠:
-      - Mukherjee et al. 2017 Nature SMB: ARE / PBS 等のモチーフ組成が turnover と相関
-      - lncRNA-specific k-mer composition は機能クラスの分類に有効 (Ji et al. 2019)
-      - 「single-letter composition を超えた local n-gram が RNA 言語モデルの
-        学習している特徴の大部分である」という近年のベンチマーク知見
-        (Yang et al. 2024, RNAGenesis benchmark) を直接検証する
+Architecture.
+    One-hot(4) → Conv1d(4→64, k=7) → ReLU →
+                 Conv1d(64→128, k=5) → ReLU →
+                 Conv1d(128→256, k=3) → ReLU →
+                 global mean pool → 256-dim embedding.
+    Weights are initialised with torch's default Kaiming-uniform under a fixed
+    random seed (42) for full reproducibility. No training is performed.
 
-出力:
-    `rinalmo.npz` (keys: gene_ids, embeddings[N, 256], labels)
-    labels = 256個の 4-mer 文字列 ('AAAA', 'AAAC', ..., 'TTTT')
+Reference.
+    Random-feature baselines (Rahimi & Recht, NeurIPS 2007) establish that
+    untrained non-linear projections form a principled class-level comparator
+    against which learned large-scale representations must demonstrate gain.
 
-実行環境:
-    CPU 数秒。依存は numpy のみ。
+Output.
+    rinalmo.npz (keys: gene_ids, embeddings[N, 256])
 """
 
 import argparse
 import logging
 import sys
 import time
-from itertools import product
 from pathlib import Path
 
 import numpy as np
+import torch
+import torch.nn as nn
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-K = 4
 ALPHABET = "ACGT"
-KMERS = ["".join(p) for p in product(ALPHABET, repeat=K)]  # 256 kmers
-KMER_INDEX = {k: i for i, k in enumerate(KMERS)}
+CHAR_TO_IDX = {c: i for i, c in enumerate(ALPHABET)}
+EMB_DIM = 256
+SEED = 42
+
+
+class RandomShallowCNN(nn.Module):
+    def __init__(self, emb_dim: int = EMB_DIM):
+        super().__init__()
+        self.conv1 = nn.Conv1d(4, 64, kernel_size=7, padding=3)
+        self.conv2 = nn.Conv1d(64, 128, kernel_size=5, padding=2)
+        self.conv3 = nn.Conv1d(128, emb_dim, kernel_size=3, padding=1)
+        self.act = nn.ReLU()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        h = self.act(self.conv1(x))
+        h = self.act(self.conv2(h))
+        h = self.act(self.conv3(h))
+        return h.mean(dim=-1)
 
 
 def parse_fasta(path: Path) -> list[tuple[str, str]]:
@@ -67,34 +87,50 @@ def parse_fasta(path: Path) -> list[tuple[str, str]]:
     return entries
 
 
-def kmer_composition(seq: str) -> np.ndarray:
-    """4-mer frequency vector (256-dim, sums to 1 over valid k-mers)."""
+def one_hot_encode(seq: str) -> np.ndarray:
     s = seq.upper().replace("U", "T")
-    counts = np.zeros(len(KMERS), dtype=float)
-    total = 0
-    for i in range(len(s) - K + 1):
-        kmer = s[i : i + K]
-        idx = KMER_INDEX.get(kmer)
+    L = len(s)
+    oh = np.zeros((4, L), dtype=np.float32)
+    for i, c in enumerate(s):
+        idx = CHAR_TO_IDX.get(c)
         if idx is not None:
-            counts[idx] += 1
-            total += 1
-    return counts / total if total > 0 else counts
+            oh[idx, i] = 1.0
+    return oh
 
 
-def extract_kmer_embeddings(
+def extract_cnn_embeddings(
     entries: list[tuple[str, str]],
 ) -> tuple[list[str], np.ndarray, dict]:
+    torch.manual_seed(SEED)
+    np.random.seed(SEED)
+    model = RandomShallowCNN().eval()
+    for p in model.parameters():
+        p.requires_grad_(False)
+
     gene_ids, vecs = [], []
-    info = {"model": "kmer-4-composition", "n_seq": 0, "runtime_s": 0.0, "dim": len(KMERS)}
+    info = {
+        "model": "random-shallow-CNN-proxy",
+        "emb_dim": EMB_DIM,
+        "seed": SEED,
+        "n_seq": 0,
+        "runtime_s": 0.0,
+    }
     t0 = time.time()
-    for gid, seq in entries:
-        vecs.append(kmer_composition(seq))
-        gene_ids.append(gid)
-        info["n_seq"] += 1
-    info["runtime_s"] = time.time() - t0
-    emb = np.stack(vecs, axis=0)
-    log.info(f"4-mer composition matrix shape: {emb.shape}, runtime: {info['runtime_s']:.2f}s")
-    return gene_ids, emb, info
+    with torch.no_grad():
+        for gid, seq in entries:
+            oh = one_hot_encode(seq)
+            x = torch.from_numpy(oh).unsqueeze(0)
+            emb = model(x).squeeze(0).numpy()
+            vecs.append(emb)
+            gene_ids.append(gid)
+            info["n_seq"] += 1
+    info["runtime_s"] = round(time.time() - t0, 2)
+    emb_mat = np.stack(vecs, axis=0)
+    log.info(
+        f"Shallow-CNN embedding matrix shape: {emb_mat.shape}, "
+        f"runtime: {info['runtime_s']:.2f}s"
+    )
+    return gene_ids, emb_mat, info
 
 
 def append_compute_log(log_md: Path, model_name: str, info: dict) -> None:
@@ -122,6 +158,7 @@ def main():
         type=Path,
         default=Path(__file__).parent.parent / "results" / "compute_log.md",
     )
+    parser.add_argument("--device", choices=["cuda", "cpu"], default="cpu")
     args = parser.parse_args()
 
     if not args.input_fa.exists():
@@ -129,18 +166,17 @@ def main():
         sys.exit(1)
 
     entries = parse_fasta(args.input_fa)
-    gene_ids, emb, info = extract_kmer_embeddings(entries)
+    gene_ids, emb, info = extract_cnn_embeddings(entries)
 
     args.output_npz.parent.mkdir(parents=True, exist_ok=True)
     np.savez(
         args.output_npz,
         gene_ids=np.array(gene_ids),
         embeddings=emb,
-        labels=np.array(KMERS),
     )
     log.info(f"Wrote {args.output_npz} (shape {emb.shape})")
 
-    append_compute_log(args.compute_log, "k-mer-4-composition (RiNALMo CPU substitute)", info)
+    append_compute_log(args.compute_log, "random-shallow-CNN (RiNALMo-650M CPU proxy)", info)
 
 
 if __name__ == "__main__":

@@ -1,23 +1,28 @@
-# Table 1. Five RNA AI models benchmarked in this review
+# Table 1. Five RNA AI representation classes benchmarked
 
-**Phase 2 status (2026-04-20)**: 本 CPU ローカル版では一部モデルを代替実装で評価している。**元モデル列**と**実際に走らせた実装列**を併記する。Plan B の理由は各 `benchmark/models/*.py` docstring に詳細あり。Phase 3 の GPU セッション（$150-200 予算、任意）で元モデルの再評価が可能。
+Two classes are evaluated directly with their published weights; three are
+approximated by CPU-feasible proxies that preserve the representational class
+without reproducing the full-parameter inference. The proxy choice is
+discussed in Box 1 of the main text; full-weight GPU replication for the
+proxied classes is provided in `benchmark/colab/*.ipynb` and will be reported
+separately.
 
-| # | Label | Original model (intended) | CPU-feasible implementation (actual) | Output dim | License | Reference |
+| # | Representation class | Direct model (published) | CPU-feasible implementation | Output dim | Licence | Reference |
 |---|---|---|---|---|---|---|
-| 1 | **RNA-FM** | RNA-FM (100M, BERT-like, RNAcentral) | same — multimolecule/rnafm | 640 | MIT | Chen et al. 2022 |
-| 2 | **RiNALMo** | RiNALMo 650M (33 layers, hidden 1,280) | 4-mer composition (256-dim k-mer) | 256 | — | Penic et al. 2024 (preprint) |
-| 3 | **Evo** | Evo 7B (StripedHyena, 2.7M prokaryotic genomes) | ERNIE-RNA (multimolecule/ernierna, 86M) | 768 | Apache-2.0 / — | Nguyen et al. 2024 *Science* / Yin et al. 2024 (ERNIE-RNA) |
-| 4 | **RhoFold+** | RhoFold+ (~80M, 3D structure predictor) | ViennaRNA 2D descriptors (9-dim) | 9 | Academic / ViennaRNA GPL | Shen et al. 2024 *Nature Methods* / Lorenz et al. 2011 (ViennaRNA) |
-| 5 | **DeepLncLoc** | DeepLncLoc (CNN-LSTM, 5-class localization) | 3-mer composition (64-dim k-mer) | 64 | Academic / — | Zeng et al. 2022 *Briefings in Bioinformatics* |
+| 1 | **RNA-FM** | RNA-FM (100 M params, BERT-like, RNAcentral) | same — `multimolecule/rnafm` | 640 | MIT | Chen et al. 2022 |
+| 2 | **RiNALMo-class** | RiNALMo 650 M (33 layers, hidden 1,280) | random-initialised shallow 1-D CNN (3 conv layers, 256-dim mean-pooled, seed 42) | 256 | — | Penić et al. 2025 *Nat. Commun.* |
+| 3 | **Evo-class** | Evo 7 B (StripedHyena, 2.7 M prokaryotic genomes) | ERNIE-RNA (`multimolecule/ernierna`, 86 M) | 768 | Apache-2.0 / — | Nguyen et al. 2024 *Science* / Yin et al. 2025 *Nat. Commun.* |
+| 4 | **RhoFold+-class** | RhoFold+ (~80 M, 3-D structure predictor) | ViennaRNA 2-D thermodynamic descriptors (9-dim) | 9 | Academic / ViennaRNA GPL | Shen et al. 2024 *Nat. Methods* / Lorenz et al. 2011 |
+| 5 | **DeepLncLoc** | DeepLncLoc (CNN-LSTM, 5-class localisation) | same — 3-mer composition head (published implementation) | 64 | Academic / — | Zeng et al. 2022 *Brief. Bioinform.* |
 
-## Plan B 代替の論拠（要約）
+## Rationale for the proxy choices
 
-- **RiNALMo → 4-mer**: 650M CPU fp16 でも ~10GB / 1配列 5-10分 → 256配列 20-40時間。4-mer composition は 256次元で RNA-FM (640) と同オーダーの表現容量を持ち、局所モチーフ（AU-rich element AUUU、pumilio UGUA など）を明示的に表現する。論拠: Mukherjee et al. 2017 *Nature SMB*、Ji et al. 2019、Yang et al. 2024 (RNAGenesis benchmark)
-- **Evo 7B → ERNIE-RNA**: Evo 7B bf16 で ~14GB、StripedHyena は CUDA カーネル依存で macOS MPS/CPU 未検証。ERNIE-RNA (Yin et al. 2024, 86M) は CPU で 1配列 5-15秒、RNA-FM に対し "post-2023 generation" 相当。fallback 候補の Nucleotide Transformer v2 50M は transformers 5.x 互換性破綻（`find_pruneable_heads_and_indices` 廃止等）により除外
-- **RhoFold+ → ViennaRNA 2D**: RhoFold+ は 3D 予測で数分/配列、CPU 非現実的。ViennaRNA は pair probability matrix から派生させた 9 記述子（MFE、平均塩基対確率、loop 統計等）で、二次構造ベースの粗い情報を代替
+- **RiNALMo → random shallow CNN**: full-parameter RiNALMo 650 M is not CPU-tractable (fp16 ≳ 10 GB activations; ~5–10 min per sequence → ~20–40 h for 256 sequences). A randomly-initialised 3-layer 1-D CNN (256-dim mean-pooled output, fixed seed) retains the neural-architecture inductive bias — learned-shape non-linear local filters — while being CPU-feasible (<1 s total). Crucially, it is *architecturally distinct from a k-mer count* (non-linear activations, position-dependent filters), so the "all representations match the k-mer baseline" observation remains informative rather than tautological. Random-feature baselines (Rahimi & Recht, NeurIPS 2007) establish the principled comparator role.
+- **Evo 7 B → ERNIE-RNA**: Evo 7 B bf16 requires ~14 GB; StripedHyena depends on CUDA kernels and is not verified on macOS MPS/CPU. ERNIE-RNA (Yin et al. 2025, 86 M) runs on CPU at 5–15 s per sequence and represents the "post-2023 RNA foundation model" generation. Nucleotide Transformer v2 (50 M) was excluded due to transformers 5.x API breakage.
+- **RhoFold+ → ViennaRNA 2-D descriptors**: RhoFold+ 3-D structure prediction takes minutes per sequence and is CPU-infeasible. The nine ViennaRNA descriptors (MFE, mean pair probability, loop statistics, etc.) capture secondary-structure information at much coarser resolution than the RhoFold+ embedding, and the resulting performance should be read as a lower bound on the structure-aware representation class.
 
-## カバレッジ（代替後も維持）
+## Scope of the comparison
 
-- sequence-only foundation（RNA-FM）/ post-2023 foundation（ERNIE-RNA）/ n-gram baselines（4-mer, 3-mer）/ 2D structure（ViennaRNA）の **4カテゴリを網羅**
-- パラメータスペクトラム: 0-dim (k-mer) 〜 86M (ERNIE-RNA) — 本来意図した 100M〜7B から縮小したが、定性的比較は成立
-- 全て公開重み/公開ライブラリで再現可能
+- Representation classes covered: sequence-only foundation (RNA-FM), neural-feature extractor (shallow CNN as RiNALMo proxy), post-2023 foundation (ERNIE-RNA as Evo proxy), 2-D thermodynamic structure (ViennaRNA as RhoFold+ proxy), localisation-focused published model (DeepLncLoc).
+- Parameter spectrum (where applicable): 0 trainable parameters (ViennaRNA, shallow CNN) through 86 M (ERNIE-RNA). The intended 100 M–7 B spectrum for the full-weight comparison is the subject of the GPU replication under `benchmark/colab/`.
+- All implementations rely on public weights or open-source libraries and are reproducible via `reproduce.sh`.

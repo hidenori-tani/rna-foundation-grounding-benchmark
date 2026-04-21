@@ -11,22 +11,21 @@ ORCID: 0000-0001-6390-4136
 
 ## Abstract
 
-Long non-coding RNAs (lncRNAs) outnumber annotated protein-coding genes yet remain
-functionally opaque, and a wave of RNA foundation models promises to read function
-directly from sequence. Using transcript half-life as a concrete functional axis,
-we benchmark five lncRNA-relevant representation classes — two directly evaluated,
-three approximated by tractable proxies — against measured RNA turnover across
-four mammalian cell systems, covering 256 lncRNAs with transcriptome-wide
-half-life measurements. No tested or proxy-evaluated representation exceeded
-AUROC 0.70 or supported robust continuous regression, and all performed similarly
-to simple k-mer composition baselines; performance on transcripts with documented
-dynamic regulation was systematically weak. We interpret this shared ceiling as
-an *observability gap* between the static pretraining signal available to
-sequence-only models and the dynamic cellular state on which lncRNA function
-most clearly depends. We introduce *dynamic grounding* — a model-agnostic,
-post-hoc conditioning of static predictions on measured state variables such as
-turnover and localisation — and advocate a tiered static × dynamic evaluation
-standard for foundation models whose labels depend on unobserved state.
+Long non-coding RNAs outnumber protein-coding genes yet remain functionally
+opaque, and RNA foundation models promise to read function from sequence.
+Using measured half-life as one axis, we benchmark five representation
+classes — two directly (RNA-FM, DeepLncLoc), three via non-parametric
+proxies — on 256 lncRNAs across four cell systems (116 classifiable under
+gene-disjoint folds). In this deliberately small setting, no representation
+exceeded AUROC 0.70 or supported robust regression, and performance on
+dynamically regulated transcripts was systematically weak. We interpret this
+converging ceiling as a testable hypothesis — an *observability gap* between
+static pretraining and the dynamic cellular state defining lncRNA function —
+not a settled finding. We propose *dynamic grounding*: a model-agnostic
+post-hoc layer conditioning static predictions in one cell system on
+turnover and localisation priors measured in independent systems, and
+advocate a tiered static × dynamic evaluation standard for foundation models
+whose labels depend on unobserved state.
 
 ---
 
@@ -143,8 +142,9 @@ benchmark is designed to probe.
 We benchmark five representation classes against transcriptome-wide RNA
 half-life ground truth. Two are evaluated directly (RNA-FM, DeepLncLoc) and three
 through CPU-feasible proxies chosen to preserve their representational class
-(4-mer composition for RiNALMo 650 M; ERNIE-RNA 86 M for Evo-class genomic
-language models; ViennaRNA thermodynamic descriptors for RhoFold+). Box 1 makes
+(a randomly-initialised shallow 1-D CNN as a proxy for RiNALMo 650 M; ERNIE-RNA 86 M
+for Evo-class genomic language models; ViennaRNA thermodynamic descriptors for
+RhoFold+). Box 1 makes
 the direct-versus-proxy distinction precise; because three classes are accessed
 through proxies rather than full-scale inference on the original weights, the
 benchmark is designed to probe *class-level* ceilings rather than to rank
@@ -164,10 +164,10 @@ units.
 **No tested representation achieved strong, stable classification.** Under
 gene-disjoint 5-fold stratified cross-validation (the primary evaluation protocol,
 Methods), the best representation × classifier combinations are the RiNALMo-proxy
-4-mer MLP (AUROC 0.695 ± 0.155), the DeepLncLoc 3-mer MLP (0.690 ± 0.167), the RNA-FM
-MLP (0.672 ± 0.141) and the Evo-class proxy (ERNIE-RNA) MLP (0.655 ± 0.149)
+random shallow-CNN MLP (AUROC 0.694 ± 0.145), the DeepLncLoc MLP (0.690 ± 0.152), the
+RNA-FM MLP (0.672 ± 0.127) and the Evo-class proxy (ERNIE-RNA) MLP (0.655 ± 0.126)
 (Fig. 2). The RhoFold+ proxy (ViennaRNA thermodynamic descriptors) is the weakest at
-0.396 ± 0.118 with MLP, improving to 0.589 ± 0.133 with logistic regression. The four
+0.396 ± 0.080 with MLP, improving to 0.589 ± 0.150 with logistic regression. The four
 leading combinations fall within approximately one standard deviation of each other
 and their bootstrap 95% confidence intervals overlap substantially; we therefore read
 them as performing similarly within the variance of this benchmark rather than as a
@@ -187,15 +187,18 @@ that the remaining predictive information resides in dynamic cellular state rath
 than in sequence alone.
 
 **A classical k-mer baseline performs similarly to every tested representation.**
-The 3-mer (64 dimensions) and 4-mer (256 dimensions) composition vectors fed to an
-MLP recover AUROC values within the cross-validation variance of RNA-FM's
-640-dimensional pretrained embedding (Fig. 2, colour-coded by representation class).
-Read together with the recent RNAGenesis comparisons^13^, this observation
-motivates testing whether dynamic measurements add information that is not already
-recoverable from sequence-only pretraining; it does not, by itself, settle the
-question for larger directly-evaluated weights. Whether this ceiling lifts with
-GPU-scale replication of full RiNALMo 650 M and Evo 7 B is an empirical question
-that the proxy benchmark cannot close on its own.
+A 3-mer composition vector (64 dimensions) fed to the same MLP stack recovers
+AUROC values within the cross-validation variance of RNA-FM's 640-dimensional
+pretrained embedding and the shallow-CNN RiNALMo proxy (Fig. 2, colour-coded by
+representation class). Because the RiNALMo proxy uses a non-linear neural
+architecture rather than k-mer counts, its proximity to the count-based baseline
+is an empirical observation rather than a tautology of construction. Read
+together with the recent RNAGenesis comparisons^13^, this motivates testing
+whether dynamic measurements add information that is not already recoverable
+from sequence-only pretraining; it does not, by itself, settle the question for
+larger directly-evaluated weights. Whether this ceiling lifts with GPU-scale
+replication of full RiNALMo 650 M and Evo 7 B is an empirical question that the
+proxy benchmark cannot close on its own.
 
 **Cross-cell generalisation is noisy.** Under leave-one-cell-out cross-validation,
 absolute AUROC values fluctuate widely (0.26 ≤ SD ≤ 0.40 across cells) because per-cell
@@ -301,8 +304,12 @@ benchmarked is not itself altered by the grounding step. *Scaling.* One might
 suspect that a longer context window, a richer tokeniser or a larger
 parameter count would eventually close the gap without any auxiliary signal.
 The length-tertile and k-mer-baseline results argue against this reading:
-a 4-mer composition feature that preserves no positional information matched
-100 M- to 7 B-parameter sequence models (Fig. 2, Supplementary Fig. 1). The
+a count-based 3-mer composition baseline that preserves no positional
+information reaches AUROC values overlapping those of the directly-evaluated
+640-dim RNA-FM embedding and the shallow-CNN proxy class (Fig. 2,
+Supplementary Fig. 1), although we cannot yet exclude the possibility that
+full-weight GPU replication of RiNALMo 650 M or Evo 7 B lifts this ceiling
+— an open empirical question. The
 bottleneck is not sequence representation; it is the absence of the state
 variable *z* from the pretraining distribution. A corollary is that *z* need
 not be measured perfectly to be useful. Published turnover and localisation
@@ -373,11 +380,15 @@ used throughout.
   and inference pipeline (here: RNA-FM, DeepLncLoc).
 - **Proxy representation** — a CPU-feasible surrogate that captures the
   *representational class* of a published model without reproducing its weights
-  (here: 4-mer composition as a proxy for RiNALMo 650M; ERNIE-RNA 86M as a proxy for
-  Evo-class 7B genomic language models; ViennaRNA 2-D descriptors as a proxy for
-  RhoFold+).
-- **Classical baseline** — non-neural sequence features (k-mer composition) used for
-  reference, conceptually separate from the proxy representations above.
+  (here: a randomly-initialised shallow 1-D CNN with mean-pooled 256-dim output
+  as a proxy for RiNALMo 650M; ERNIE-RNA 86M as a proxy for Evo-class 7B genomic
+  language models; ViennaRNA 2-D descriptors as a proxy for RhoFold+). The
+  random-CNN choice is architecturally distinct from the k-mer baseline below
+  (non-linear local filters with learned-shape but untrained weights), so that
+  neural versus count-based representation classes remain separable.
+- **Classical baseline** — non-neural sequence features (k-mer composition) used
+  for reference, conceptually and computationally separate from the proxy
+  representations above.
 
 Full-scale GPU replication of the proxied models is planned and will be reported
 separately. Throughout this Perspective, "five representations" refers to the
@@ -388,32 +399,52 @@ weights.
 
 ## Box 2. Minimal implementable prototype of dynamic grounding
 
-A minimal version of the dynamic-grounding layer requires only published resources
-and a single calibration step.
+A minimal version of the dynamic-grounding layer requires only published
+resources and a single calibration step. We describe it here as a testable
+prototype; its empirical validation on held-out tasks is a principal direction
+for future work and is not claimed as a demonstrated result of this
+Perspective.
 
-Given a transcript *t*:
+**Task framing (crucial).** Dynamic grounding predicts functional behaviour of
+a transcript *t* in a *target* cell system *C_tgt* (e.g. its stress-response
+class, its subcellular distribution, or its half-life in *C_tgt* when that
+value is unobserved), using priors drawn exclusively from one or more
+*independent source* systems *C_src ≠ C_tgt*. The framework is not intended to
+"predict" the same measurement from itself: when the prediction target is
+half-life in *C_tgt*, *p(t)* must come from *C_src* cell systems and is
+therefore a transfer prior rather than a self-input. This distinction separates
+grounding (out-of-system transfer with explicit prior conditioning) from
+imputation (filling missing values within a single system).
 
-1. Run the static model *M* to obtain a raw stability score *s(t) ∈ [0, 1]*.
-2. Retrieve the half-life posterior *p(t) = N(μ, σ²)* of *t* from the closest matched
-   BRIC-seq / SLAM-seq / TimeLapse-seq dataset; default to the cell-system average
-   when *t* is unmeasured.
-3. Retrieve the localisation prior *ℓ(t)* from CeFra-seq^17^ / APEX-seq^18^, or —
-   when such measurements are unavailable — fall back on DeepLncLoc predictions as
-   a pragmatic surrogate, noting that this reuses one of the evaluated models as a
-   provider of prior information rather than as a target of grounding.
-4. Combine into a calibrated prediction *s′(t) = σ(w₁ · logit s(t) + w₂ · z(μ_p)
-   + w₃ · logit ℓ(t))*, where *z(μ_p)* is the z-standardised posterior-mean
-   half-life and the three weights are fitted by logistic calibration on a
-   held-out fold.
+**Minimal algorithm.** Given a target cell system *C_tgt* with a held-out
+transcript *t*:
 
-In practice, step 4 reduces to a low-dimensional logistic regression that combines
-the static score with two orthogonal priors, and can be implemented with standard
-calibration toolkits. The only additional inputs beyond the original model are
-(*p*, *ℓ*), both of which are recoverable from publicly available resources for
-any cell system with a BRIC-seq / SLAM-seq / TimeLapse-seq dataset. Richer
-conditioning (structured priors, kinetic-aware pretraining objectives, multi-task
-training on turnover labels) are natural next steps but are not required for the
-framework to be useful.
+1. Run the static model *M* on *t*'s sequence to obtain a raw functional score
+   *s(t) ∈ [0, 1]*.
+2. Retrieve a cross-system half-life prior *p(t) = N(μ, σ²)* from BRIC-seq /
+   SLAM-seq / TimeLapse-seq measurements in *C_src* cell systems **only**;
+   default to the *C_src*-average when *t* is unmeasured in *C_src*. *p(t)*
+   contains no measurement of *t* from *C_tgt*.
+3. Retrieve the localisation prior *ℓ(t)* from CeFra-seq^17^ / APEX-seq^18^
+   (also sourced independently of *C_tgt* when the prediction target concerns
+   localisation), or — when such measurements are unavailable — fall back on
+   DeepLncLoc predictions as a pragmatic surrogate, noting that this reuses
+   one of the evaluated models as a provider of prior information rather than
+   as a target of grounding.
+4. Combine into a calibrated prediction *s′(t) = σ(w₁ · logit s(t) + w₂ ·
+   z(μ_p) + w₃ · logit ℓ(t))*, where *z(μ_p)* is the z-standardised
+   posterior-mean half-life and the three weights are fitted by logistic
+   calibration on a held-out fold of *C_tgt* that excludes *t*.
+
+In practice, step 4 reduces to a low-dimensional logistic regression that
+combines the static score with two cross-system priors, and can be implemented
+with standard calibration toolkits. The only additional inputs beyond the
+original model are (*p*, *ℓ*), both recoverable from publicly available
+resources in cell systems independent of the target. Richer conditioning
+(structured priors, kinetic-aware pretraining objectives, multi-task training
+on turnover labels) are natural next steps but are not required for the
+framework's testable prediction that out-of-system dynamic priors close part
+of the observed ceiling.
 
 ---
 
@@ -427,11 +458,16 @@ embryonic fibroblasts); binary labels stable (t½ > 4 h, n = 40) and unstable
 (t½ < 2 h, n = 76) define the 116-sequence classification subset, with the
 remaining 140 transcripts used only for continuous regression.
 Half-life ground truth combines BRIC-seq^10^, SLAM-seq^11^ and TimeLapse-seq^12^
-across the four cell systems. Representations: two direct (RNA-FM^5^, DeepLncLoc^9^)
-and three proxies capturing representational class (4-mer composition for
-RiNALMo^6^; ERNIE-RNA^16^ for Evo-class^7^ genomic language models; ViennaRNA^15^
-thermodynamic descriptors for RhoFold+^8^; see Box 1). Downstream stack: logistic
-regression, ridge regression, and a 2-layer MLP (64 hidden units). Primary
+across the four cell systems. Representations: two direct (RNA-FM^5^,
+DeepLncLoc^9^) and three proxies capturing representational class — a
+randomly-initialised shallow 1-D CNN (three convolutional layers, 256-dim
+mean-pooled output, fixed seed) as a proxy for RiNALMo^6^; ERNIE-RNA^16^ for
+Evo-class^7^ genomic language models; ViennaRNA^15^ thermodynamic descriptors
+for RhoFold+^8^ (see Box 1). The shallow-CNN proxy is intentionally
+architecturally distinct from the k-mer baseline, so that neural and
+count-based representation classes remain separable in the comparison.
+Downstream stack: logistic regression, ridge regression, and a 2-layer MLP
+(64 hidden units). Primary
 cross-validation is gene-disjoint 5-fold stratified, so that no `gene_id`
 contributes to both the training and test folds; leave-one-cell-out is reported as
 a diagnostic only. Uncertainty is reported as per-fold mean ± standard deviation

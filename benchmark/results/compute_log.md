@@ -28,3 +28,10 @@
 - n_seq: 256
 - runtime_s: 921.2303311824799
 - hidden_dim: 768
+
+## random-shallow-CNN (RiNALMo-650M CPU proxy)
+- model: random-shallow-CNN-proxy
+- emb_dim: 256
+- seed: 42
+- n_seq: 256
+- runtime_s: 0.95
