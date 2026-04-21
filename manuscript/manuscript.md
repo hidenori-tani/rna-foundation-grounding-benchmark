@@ -458,7 +458,10 @@ replicate the GPU results for RiNALMo-650M, Evo-7B, and RhoFold+.
 
 The author thanks the laboratories that generated and publicly released the
 RNA half-life datasets and RNA AI model weights used here. No dedicated funding
-supported this Perspective.
+supported this Perspective. The author used Claude (Anthropic) as a writing
+and coding assistant during manuscript preparation and benchmark implementation.
+All intellectual content, scientific interpretations, methodological choices,
+and final wording are the author's responsibility.
 
 ## Author contributions
 
