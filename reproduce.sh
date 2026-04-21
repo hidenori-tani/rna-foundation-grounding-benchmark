@@ -88,9 +88,9 @@ if [[ $SKIP_PHASE2 -eq 0 ]]; then
 
     step "Model 1/5: RNA-FM"        $PY benchmark/models/rna_fm.py --device cpu
     step "Model 2/5: RiNALMo (random shallow-CNN proxy)" $PY benchmark/models/rinalmo.py --device cpu
-    step "Model 3/5: Evo (ERNIE-RNA proxy)" $PY benchmark/models/evo.py --device cpu
+    step "Model 3/5: Evo (ERNIE-RNA proxy)" $PY benchmark/models/evo.py
     step "Model 4/5: RhoFold+ (ViennaRNA proxy)" $PY benchmark/models/rhofold_plus.py
-    step "Model 5/5: DeepLncLoc"    $PY benchmark/models/deeplncloc.py --device cpu
+    step "Model 5/5: DeepLncLoc"    $PY benchmark/models/deeplncloc.py
 
     echo ""
     echo "=========================================="
