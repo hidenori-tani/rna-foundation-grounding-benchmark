@@ -118,6 +118,7 @@ if [[ $SKIP_FIGURES -eq 0 ]]; then
     step "Fig 3: Performance scatter" $PY figures/fig3_scatter.py
     step "Fig 4: Failure analysis"  $PY figures/fig4_failure_analysis.py
     step "Fig 5: Framework schematic" $PY figures/fig5_framework.py
+    step "Supp Fig 1: Length-tertile performance" $PY figures/supp_fig1_length_tertile.py
 fi
 
 echo ""
