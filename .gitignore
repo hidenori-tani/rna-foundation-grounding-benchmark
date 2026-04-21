@@ -1,0 +1,49 @@
+# Raw data (too large for version control, re-fetched by data/pipeline/)
+data/raw/
+*.bam
+*.fastq
+*.fastq.gz
+*.sra
+
+# GENCODE annotations (>50 MB; re-fetched by data/pipeline/fetch_gencode.py)
+data/processed/gencode_*.gtf
+data/processed/gencode_*.fa
+
+# Model weights
+*.pt
+*.safetensors
+*.bin
+*.ckpt
+
+# Embeddings (can be regenerated from models + test set)
+benchmark/results/embeddings/*.npz
+
+# Temporary files
+*.DS_Store
+*.tmp
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Virtual envs
+.venv/
+venv/
+.env
+
+# Internal planning / correspondence (not for public repo)
+SETUP.md
+plan.md
+spec.md
+spread_integration.md
+briefings_guidelines.md
+natmi_guidelines.md
+nargb_guidelines.md
+inquiry/
+submission/
+literature/
+
+# Large submission packages (regenerable from components)
+submission/*.zip
+
+# Colab-specific
+.colab_runtime_log

@@ -1,0 +1,34 @@
+# Phase 2 benchmark — pinned dependencies
+#
+# Tested with Python 3.10 and 3.11 on macOS (CPU) and Linux (CPU, CUDA 11.8).
+# Install:
+#     pip install -r benchmark/requirements.txt
+#
+# The constraints below are lower bounds validated during the benchmark runs
+# reported in the manuscript. Newer point releases should work; report any
+# incompatibility as a GitHub issue.
+
+# Core scientific stack
+numpy>=1.24,<3
+pandas>=2.0,<3
+scipy>=1.10,<2
+scikit-learn>=1.3,<2
+
+# Deep learning backbone (CPU + CUDA)
+torch>=2.0,<3
+
+# HuggingFace RNA / genomic language models (RNA-FM, RiNALMo, ERNIE-RNA)
+multimolecule>=0.0.5
+transformers>=4.36
+
+# Structure analysis
+biopython>=1.83
+ViennaRNA>=2.6         # 2D descriptors used as the RhoFold+ proxy
+
+# Interpretability
+captum>=0.7            # Integrated Gradients for the MLP heads
+shap>=0.44             # SHAP for the Logistic Regression heads
+
+# Phase 1 data pipeline (optional, only needed to rebuild the test set)
+# openpyxl>=3.1        # Schofield supplementary xlsx parsing
+# requests>=2.31       # GEO / GENCODE fetch scripts

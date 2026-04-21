@@ -1,0 +1,33 @@
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+Copyright (c) 2026 Hidenori Tani
+
+The data tables and figures in this repository are licensed under the
+Creative Commons Attribution 4.0 International License. You are free to
+share and adapt the material for any purpose, including commercially,
+provided that appropriate credit is given and any changes are indicated.
+
+Full license text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+## Attribution
+
+When reusing processed tables, figures or derived statistics from this
+repository, please cite:
+
+> Tani, H. *Grounding RNA foundation models in transcript dynamics.*
+> Manuscript submitted. DOI to be updated upon publication.
+
+## Upstream data licenses
+
+Processed tables in `data/processed/` are derived from third-party public
+datasets that retain their original licenses and attribution requirements:
+
+| Upstream dataset | Original citation | Accession |
+|---|---|---|
+| BRIC-seq (HeLa Tet-off) | Tani et al. *Genome Res.* 22, 947-956 (2012) | GSE30792 |
+| SLAM-seq (mESC) | Herzog et al. *Nat. Methods* 14, 1198-1204 (2017) | GSE99970 |
+| TimeLapse-seq (K562, MEF) | Schofield et al. *Nat. Methods* 15, 221-225 (2018) | GSE103493 |
+| GENCODE annotations | Frankish et al. *Nucleic Acids Res.* 51, D942 (2023) | v44 / vM33 |
+
+Users redistributing the processed tables must also comply with the upstream
+licenses listed above.

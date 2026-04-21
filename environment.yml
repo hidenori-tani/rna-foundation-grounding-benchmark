@@ -1,0 +1,33 @@
+name: rna-foundation-grounding
+channels:
+  - conda-forge
+  - bioconda
+  - pytorch
+
+dependencies:
+  - python>=3.10,<3.13
+  - pip
+
+  # Core scientific stack
+  - numpy>=1.24,<3
+  - pandas>=2.0,<3
+  - scipy>=1.10,<2
+  - scikit-learn>=1.3,<2
+
+  # Deep learning (CPU build; swap in pytorch-cuda on GPU hosts)
+  - pytorch>=2.0,<3
+
+  # Structure analysis
+  - biopython>=1.83
+  - viennarna>=2.6         # from bioconda
+
+  # Phase 1 data pipeline helpers
+  - requests>=2.31
+  - openpyxl>=3.1
+
+  # Packages pulled via pip (not all are on conda-forge)
+  - pip:
+      - multimolecule>=0.0.5   # HuggingFace wrapper for RNA-FM, RiNALMo, ERNIE-RNA
+      - transformers>=4.36
+      - captum>=0.7
+      - shap>=0.44
