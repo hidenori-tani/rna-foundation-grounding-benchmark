@@ -86,13 +86,14 @@ def draw_arrow(ax, xy_from, xy_to, color=C_ARROW, lw=1.6, style="-|>",
 
 def layer_band(ax, x, y, w, h, color, edge, label, sublabel=None):
     draw_rounded_box(ax, x, y, w, h, color, edge, lw=1.4, rounding=0.1)
-    # Header placed ABOVE the band, shifted right so the left-column
-    # vertical arrows (x~1.8) do not cross the header text.
-    ax.text(x + 3.30, y + h + 0.18, label,
+    # Header placed INSIDE the band at the top so the inter-band gap
+    # contains only the bridge arrow and its italic caption; this
+    # avoids the central down-arrow crossing the header text.
+    ax.text(x + 0.25, y + h - 0.18, label,
             ha="left", va="center",
-            fontsize=11, fontweight="bold", color=edge)
+            fontsize=10, fontweight="bold", color=edge)
     if sublabel:
-        ax.text(x + w - 0.15, y + h + 0.18, sublabel,
+        ax.text(x + w - 0.20, y + h - 0.18, sublabel,
                 ha="right", va="center",
                 fontsize=8, fontstyle="italic", color=edge)
 
@@ -191,7 +192,7 @@ def main():
     # ------------------------------------------------------------------
     # Center bridge arrow
     draw_arrow(ax, (7.5, 5.90), (7.5, 5.30), color=C_ARROW_DN, lw=2.2, mutation_scale=20)
-    ax.text(8.1, 5.80, "condition on measurable biology",
+    ax.text(8.1, 5.60, "condition on measurable biology",
             ha="left", va="center",
             fontsize=8.5, fontweight="bold", color=C_ARROW_DN, fontstyle="italic")
 
@@ -404,7 +405,7 @@ def main():
     draw_arrow(ax, (1.8, 3.05), (1.8, 2.48), color=C_ARROW, lw=1.6, mutation_scale=14)
     # Layer 2 → Layer 3 central bridge
     draw_arrow(ax, (7.5, 3.05), (7.5, 2.48), color=C_ARROW_OUT, lw=2.2, mutation_scale=20)
-    ax.text(8.1, 2.95, "project onto biology bins",
+    ax.text(8.1, 2.77, "project onto biology bins",
             ha="left", va="center",
             fontsize=8.5, fontweight="bold", color=C_ARROW_OUT, fontstyle="italic")
 
