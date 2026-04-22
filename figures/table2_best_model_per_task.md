@@ -1,44 +1,40 @@
-# Table 2. Best-performing model per evaluation task
+# Table 2. Best-performing representation-classifier combination per evaluation task
 
-**Source**: `benchmark/results/metrics_summary.csv` + `metrics_table.csv` (Phase 2, 2026-04-20, Plan B CPU version)  
-**Test set**: 256 sequences (116 classifiable: stable=40, unstable=76; full set used for regression)  
-**CV**: 5-fold stratified (classification) / 5-fold (regression) + leave-one-cell-out (LOCO)
+**Source**: `benchmark/results/metrics_summary.csv` (Phase 2, CPU-proxy run).
+**Test set**: 256 lncRNAs (116 classifiable: stable = 40, unstable = 76; full 256 used for continuous regression).
+**CV**: gene-disjoint 5-fold stratified (primary) + leave-one-cell-out (LOCO, diagnostic).
+**Representations**: RNA-FM and DeepLncLoc directly evaluated; RiNALMo, Evo and RhoFold+ through CPU-feasible proxies (random shallow 1-D CNN / ERNIE-RNA / ViennaRNA descriptors; see Box 1 and Table 1).
 
 ## Classification (binary stable vs unstable)
 
-| Metric | Best model | Classifier | 5-fold (mean ± SD) | LOCO (mean ± SD) | Runner-up | Note |
-|---|---|---|---|---|---|---|
-| AUROC | **rinalmo (4-mer)*** | MLP | **0.695 ± 0.155** | 0.658 ± 0.282 (MLP) | deeplncloc MLP 0.690 | n-gram baseline tops foundation models |
-| F1 | rna_fm | LogReg | 0.428 ± 0.169 | — | rhofold_plus LogReg 0.412 | class imbalance effects prominent |
-| MCC | deeplncloc (3-mer) | MLP | 0.234 ± 0.228 | — | rinalmo MLP 0.233 | overall MCC low — task is hard |
+| Metric | Best combination | 5-fold (mean ± SD) | LOCO (mean ± SD) | Runner-up | Note |
+|---|---|---|---|---|---|
+| AUROC | **RiNALMo proxy (shallow CNN) + MLP** | **0.694 ± 0.145** | 0.672 ± 0.304 | DeepLncLoc MLP 0.690 ± 0.152 | Four leading MLP combinations (RiNALMo proxy / DeepLncLoc / RNA-FM / Evo proxy) fall within ~1 SD |
+| F1 | RNA-FM + LogReg | 0.428 ± 0.168 | — | RhoFold+ proxy LogReg 0.412 ± 0.116 | Pronounced class-imbalance effects |
+| MCC | DeepLncLoc + MLP | 0.234 ± 0.228 | — | RNA-FM LogReg 0.194 ± 0.159 | Overall MCC remains low; task is hard |
 
-## Regression (log2 half-life)
+## Regression (log₂ half-life, hours)
 
-| Metric | Best model | Regressor | 5-fold (mean ± SD) | LOCO (mean ± SD) | Runner-up | Note |
-|---|---|---|---|---|---|---|
-| Spearman ρ | deeplncloc (3-mer) | MLP | 0.186 ± 0.087 | — | rna_fm MLP 0.153 | all models near-chance |
-| Pearson r | rna_fm | MLP | 0.181 ± 0.102 | — | deeplncloc MLP 0.146 | RNA-FM leads marginally |
-| Spearman ρ (LOCO) | rinalmo (4-mer)* | Ridge | 0.260 ± 0.399 | — | rna_fm Ridge 0.165 | huge SD from small per-cell N |
-| RMSE | deeplncloc (3-mer) | MLP | 1.018 ± 0.092 | — | rna_fm MLP 1.025 | log2(h) units |
+| Metric | Best combination | 5-fold (mean ± SD) | Runner-up | Note |
+|---|---|---|---|---|
+| Spearman ρ | DeepLncLoc + MLP | 0.186 ± 0.087 | RiNALMo proxy MLP 0.174 ± 0.120 | All representations near chance |
+| Pearson r | RNA-FM + MLP | 0.181 ± 0.102 | RiNALMo proxy MLP 0.149 ± 0.119 | — |
+| RMSE (log₂ h) | DeepLncLoc + MLP | 1.018 ± 0.092 | RNA-FM MLP 1.025 ± 0.093 | log₂(h) units |
+| Spearman ρ (LOCO) | RNA-FM + Ridge | 0.165 ± 0.381 | Evo proxy Ridge 0.159 ± 0.487 | Huge SD from small per-cell N (LOCO diagnostic only) |
 
-(*) = Plan B CPU substitute (see Table 1 for details)
+## Reading the ranking
 
-## 解釈原則の適用
+- **AUROC spread** across the five representation × three classifier combinations is 0.299 (0.396 RhoFold+ proxy MLP → 0.694 RiNALMo proxy MLP); binary-classification diversification is sufficient for further analysis.
+- **No representation's mean AUROC exceeds 0.70** under gene-disjoint 5-fold stratified CV; per-fold variance is 0.08–0.15 and bootstrap 95% CIs overlap across the four leading combinations, so the ranking should be read as approximate.
+- **A randomly-initialised shallow 1-D CNN (used as the RiNALMo proxy) matches the directly-evaluated RNA-FM 640-dim embedding within CV variance**, and a classical 3-mer composition baseline (delivered through the DeepLncLoc CPU head) is similarly close — consistent with the benchmark's central reading that representational class, rather than pretraining scale per se, sets the current ceiling under the CPU-proxy conditions tested.
+- **Continuous regression is near chance for every representation** (Spearman ρ ≤ 0.19, RMSE clustered 1.02–1.05 in log₂(h) units), consistent with the observability-gap reading that the remaining predictive signal resides in dynamic cellular state rather than in sequence alone.
 
-### 盲点命題 A の実証度（強）
+## LOCO versus 5-fold stratified
 
-- 5モデルの 5-fold AUROC spread = **0.299** （0.396 rhofold_plus MLP〜0.695 rinalmo MLP）
-- **R3 リスク（全モデル 0.05 以内クラスタリング）は不発動** → 通常の二値分類のまま解析継続
-- **foundation model は n-gram baseline に勝てない** — k-mer 4-mer MLP（0.695）と k-mer 3-mer MLP（0.690）が RNA-FM MLP（0.672）と ERNIE-RNA MLP（0.655）を上回る
-- "black box ≠ better" の定量的実証として §4 benchmarking の主張を裏付け
+- LOCO AUROC SD ranges 0.17–0.30 because per-cell classifiable N is small (HeLa-TetOff has no unstable-class transcripts in the classifiable subset, for example).
+- Primary metric throughout the Perspective is 5-fold stratified; LOCO is reported as a diagnostic of cross-cell generalisation, not as a ranking criterion.
 
-### 構築命題 C の余地
+## Caveats
 
-- 全モデル均等に弱い（AUROC 最高 0.695、Spearman 最高 0.186）→ **dynamic grounding を追加しないと解けない問題** であるという結論を強化
-- 単一モデルで AUROC≥0.80 に届くモデルがない → foundation-scaling 戦略では不十分、turnover/localization の動的軸を条件付けする必要
-
-### LOCO vs 5-fold のギャップ
-
-- LOCO の AUROC は 5-fold より高い場合（evo LogReg 0.726）もあるが、SD 0.26-0.4 と極端に広い
-- cell line ごとのサンプル数が小さい（HeLa_TetOff は全 unstable でクラシフィカブルなし）ため LOCO 推定は不安定
-- 論文中では 5-fold stratified を primary、LOCO を cross-cell generalization の補助として位置付ける
+- Proxy-to-full-weight AUROC gap for RiNALMo-650M, Evo-7B and RhoFold+ is expected on the basis of independent zero-shot comparisons to be of the order of a few percentage points; GPU replication is in `benchmark/colab/*.ipynb` and will be reported separately.
+- Consensus-failure analysis (main-text Fig. 4) uses the same gene-disjoint 5-fold stratified MLP predictions summarised here.
