@@ -2,7 +2,7 @@
 
 **Hidenori Tani**^1,\*
 
-^1 Department of Molecular Biology, Yokohama University of Pharmaceutical Sciences, 601 Matano-cho, Totsuka-ku, Yokohama, Kanagawa 245-0066, Japan
+^1 Department of Health Pharmacy, Yokohama University of Pharmacy, 601 Matano, Totsuka, Yokohama 245-0066, Japan
 
 \* Corresponding author. hidenori.tani@yok.hamayaku.ac.jp
 ORCID: 0000-0001-6390-4136
@@ -78,7 +78,13 @@ candidate mitigation that does not require retraining; and (iii) a tiered
 static × dynamic evaluation practice is worth testing when evaluation labels
 depend on unobserved state. We stress that the empirical base here is a
 small, proxy-heavy benchmark; the scope of each hypothesis is framed
-accordingly.
+accordingly. The advance this Perspective claims is therefore conceptual and
+architectural rather than a new empirical state-of-the-art: naming the
+observability gap as a testable hypothesis, specifying dynamic grounding as
+an explicit post-hoc remedy that any sequence-only model can inherit without
+retraining, and articulating a tiered static × dynamic evaluation practice
+that makes the gap falsifiable. The benchmark motivates these constructs; it
+does not by itself validate them.
 
 The empirical scope of this Perspective is deliberately narrow: lncRNA *stability*
 measured by half-life, as a single functional axis on which the argument can be
@@ -169,7 +175,7 @@ gene-disjoint 5-fold stratified cross-validation (the primary evaluation protoco
 Methods), the best representation × classifier combinations are the RiNALMo-proxy
 random shallow-CNN MLP (AUROC 0.694 ± 0.145), the DeepLncLoc MLP (0.690 ± 0.152), the
 RNA-FM MLP (0.672 ± 0.127) and the Evo-class proxy (ERNIE-RNA) MLP (0.655 ± 0.126)
-(Fig. 2). The RhoFold+ proxy (ViennaRNA thermodynamic descriptors) is the weakest at
+(Fig. 2; Table 2). The RhoFold+ proxy (ViennaRNA thermodynamic descriptors) is the weakest at
 0.396 ± 0.080 with MLP, improving to 0.589 ± 0.150 with logistic regression. The four
 leading combinations fall within approximately one standard deviation of each other
 and their bootstrap 95% confidence intervals overlap substantially; we therefore read
@@ -189,7 +195,7 @@ remains an open empirical question that the proxy benchmark cannot close.
 **Continuous half-life regression is near chance.** Predicting log₂(half-life) in
 hours as a continuous variable against the full 256-sequence set, the best single
 model is the DeepLncLoc 3-mer MLP with Spearman ρ = 0.186 ± 0.087, followed by RNA-FM
-(ρ = 0.153 ± 0.110) (Fig. 3). RMSE in log₂(h) units clusters between 1.02 and 1.05
+(ρ = 0.153 ± 0.110) (Fig. 3; Table 2). RMSE in log₂(h) units clusters between 1.02 and 1.05
 across all representations — consistent with a near-intercept fit. The near-intercept
 behaviour of every representation on continuous half-life is consistent with the view
 that the remaining predictive information resides in dynamic cellular state rather
@@ -219,7 +225,7 @@ classifiable N is small. We report LOCO as a diagnostic, not as a primary metric
 
 If the performance ceiling were an architecture-side artefact, one would expect
 different architectures to fail on different transcripts. Instead, we find a
-consensus-failure set of 12 lncRNAs misclassified by every one of the five
+consensus-failure set of 13 lncRNAs misclassified by every one of the five
 representation classes under gene-disjoint cross-validation (Fig. 4). This
 analysis
 is deliberately *hypothesis-generating*: the sample is too small to claim formal
@@ -233,7 +239,7 @@ proteins — alongside additional transcripts (*TTTY14*, *MCM3AP-AS1*, *NBR2* an
 others) with reported cell-type-specific or stress-responsive expression. These
 serve as illustrative examples of transcripts for which a static sequence snapshot
 is unlikely to capture the relevant regulatory context, rather than as a
-biological claim about the 12-transcript set as a whole. The pattern is consistent with the
+biological claim about the 13-transcript set as a whole. The pattern is consistent with the
 observability-gap reading: transcripts whose function is carried by cellular
 state are the ones on which static representations agree least.
 
@@ -276,7 +282,8 @@ testable prediction rather than a result of the present Perspective.
 For the lncRNA half-life setting, this specialises to the tiered construction
 sketched in Fig. 5. The top tier is the static model output, preserved as-is. The
 middle tier is the joint turnover-and-localisation prior *p(t), ℓ(t)*, computed from
-published measurements on the closest matched cell system. The bottom tier is a
+published measurements on an *independent source* cell system distinct from the
+prediction target (*C_src ≠ C_tgt*, see Box 2). The bottom tier is a
 calibrated output projected onto interpretable biology bins (stable-nuclear,
 stable-cytoplasmic, unstable-nuclear, unstable-cytoplasmic, intermediate). The
 grounding layer is model-agnostic: it can be applied to any of the five
@@ -328,9 +335,12 @@ information reaches AUROC values overlapping those of the directly-evaluated
 640-dim RNA-FM embedding and the shallow-CNN proxy class (Fig. 2,
 Supplementary Fig. 1), although we cannot yet exclude the possibility that
 full-weight GPU replication of RiNALMo 650 M or Evo 7 B lifts this ceiling
-— an open empirical question. The
-bottleneck is not sequence representation; it is the absence of the state
-variable *z* from the pretraining distribution. A corollary is that *z* need
+— an open empirical question. Within the proxy regime tested here, then, the
+limiting factor appears to be not sequence representation alone but the
+absence of the state variable *z* from the pretraining distribution — a
+distinct, complementary bottleneck that scale on the sequence axis would
+not obviously remove, and one that remains to be confirmed at full
+parameter count. A corollary is that *z* need
 not be measured perfectly to be useful. Published turnover and localisation
 measurements carry their own batch effects and cell-line dependence, and
 dynamic grounding deliberately treats *z* as a bucketed empirical prior
@@ -373,8 +383,9 @@ robust lncRNA half-life prediction, motivating direct tests at full scale of
 whether dynamic measurements add information that pretraining does not
 recover. Second, the field already has those measurements: transcriptome-wide
 turnover^10–12^ and localisation^17,18^ are publicly available, and dynamic
-grounding (Fig. 5, Box 2) sketches a concrete, retraining-free route to
-bring them into contact with existing foundation-model outputs; whether
+grounding (Fig. 5, Box 2) sketches a concrete, retraining-free but
+calibration-requiring route to bring them into contact with existing
+foundation-model outputs; whether
 grounding actually closes the observed ceiling is the central empirical
 question it poses, not a conclusion reached here.
 
@@ -387,7 +398,11 @@ similarly absent from the current generation of foundation-model training
 corpora. We therefore offer the tiered evaluation framing as a testable
 template — not a recommended community standard — for any foundation model
 whose evaluation labels depend on unobserved state, with validation of the
-framing itself as the central follow-up work.
+framing itself as the central follow-up work. In short, what this
+Perspective contributes is not a performance claim but a reusable conceptual
+scaffold — an explicit observability-gap hypothesis, a retraining-free
+grounding architecture, and a tiered evaluation template — designed to be
+tested, refuted, or refined by subsequent full-scale experiments.
 
 ---
 
@@ -544,7 +559,7 @@ subset.
 **Figure 3.** Predicted versus measured log₂(half-life) for each representation
 class, with Spearman ρ in panel headers.
 
-**Figure 4.** Consensus-failure analysis: the 12 lncRNAs misclassified by every
+**Figure 4.** Consensus-failure analysis: the 13 lncRNAs misclassified by every
 one of the five representation classes under gene-disjoint 5-fold stratified
 cross-validation.
 
@@ -553,7 +568,7 @@ cross-validation.
 Illustrative case (not a validated performance claim): *NORAD* (cytoplasmic,
 stress-responsive, a consensus-failure transcript under static-only
 evaluation), sketching how the grounding layer would act on a representative
-transcript from the 12-transcript hypothesis-generating set. The grounding
+transcript from the 13-transcript hypothesis-generating set. The grounding
 layer is model-agnostic in construction, and its quantitative benefit over
 the ungrounded baseline is a principal direction for future work.
 
