@@ -40,7 +40,7 @@ log = logging.getLogger(__name__)
 MODEL_ORDER = ["rna_fm", "rinalmo", "evo", "rhofold_plus", "deeplncloc"]
 MODEL_LABELS = {
     "rna_fm": "RNA-FM",
-    "rinalmo": "RiNALMo (4-mer)*",
+    "rinalmo": "RiNALMo (shallow CNN)*",
     "evo": "Evo (ERNIE-RNA)*",
     "rhofold_plus": "RhoFold+ (ViennaRNA)*",
     "deeplncloc": "DeepLncLoc (3-mer)",
@@ -187,6 +187,9 @@ def main():
     fig.suptitle("A. Feature comparison: consensus-failure vs others", y=1.03)
     fig.tight_layout()
     fig.savefig(args.output_pdf, bbox_inches="tight")
+    png_path = args.output_pdf.with_suffix(".png")
+    fig.savefig(png_path, bbox_inches="tight", dpi=300)
+    log.info(f"Wrote {png_path}")
 
     # Panel B: disagreement matrix (first two models)
     if len(pred_col_names) >= 2:
@@ -214,7 +217,10 @@ def main():
         ax.set_title(f"B. Disagreement: {MODEL_LABELS.get(m1.replace('pred_', ''), m1)} × {MODEL_LABELS.get(m2.replace('pred_', ''), m2)}")
         fig2.tight_layout()
         fig2.savefig(panel_b, bbox_inches="tight")
+        panel_b_png = panel_b.with_suffix(".png")
+        fig2.savefig(panel_b_png, bbox_inches="tight", dpi=300)
         log.info(f"Wrote {panel_b}")
+        log.info(f"Wrote {panel_b_png}")
 
 
 if __name__ == "__main__":

@@ -38,7 +38,7 @@ log = logging.getLogger(__name__)
 MODEL_ORDER = ["rna_fm", "rinalmo", "evo", "rhofold_plus", "deeplncloc"]
 MODEL_LABELS = {
     "rna_fm": "RNA-FM",
-    "rinalmo": "RiNALMo (4-mer)*",
+    "rinalmo": "RiNALMo (shallow CNN)*",
     "evo": "Evo (ERNIE-RNA)*",
     "rhofold_plus": "RhoFold+ (ViennaRNA)*",
     "deeplncloc": "DeepLncLoc (3-mer)",
