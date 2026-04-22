@@ -7,7 +7,8 @@ Three-layer architecture:
   Layer 2: Dynamic grounding constraint (turnover + localization priors)
   Layer 3: Biology-aware calibrated output
 
-Walkthrough example uses NEAT1 (nuclear, stable) as a concrete flow.
+Walkthrough example uses NORAD (cytoplasmic, stable, stress-responsive)
+— a consensus-failure lncRNA — as a concrete flow.
 Pure matplotlib. Paired with fig1_concept.py in visual style.
 
 Output:
@@ -114,7 +115,7 @@ def main():
     )
     ax.text(
         7.5, 9.65,
-        "Worked example: NEAT1 (nuclear, long half-life)",
+        "Worked example: NORAD (cytoplasmic, long half-life, stress-responsive)",
         ha="center", va="center",
         fontsize=9.5, fontstyle="italic", color="#555555",
     )
@@ -127,7 +128,7 @@ def main():
     # Input column (left)
     # RNA sequence
     draw_rounded_box(ax, 0.25, 8.55, 2.1, 0.5, "#FFFFFF", "#BBBBBB", lw=0.9,
-                     text="NEAT1 (4-kb isoform)", fontsize=8.5, fontweight="bold")
+                     text="NORAD (~5.3 kb)", fontsize=8.5, fontweight="bold")
     ax.text(1.3, 8.20, "RNA sequence input", ha="center",
             fontsize=7.5, fontstyle="italic", color="#777777")
 
@@ -146,7 +147,7 @@ def main():
     # Five model boxes in a row
     models = [
         ("RNA-FM", "640-dim"),
-        ("RiNALMo*", "4-mer 256"),
+        ("RiNALMo*", "shallow CNN 256"),
         ("Evo*", "ERNIE-RNA 768"),
         ("RhoFold+*", "2D 9-dim"),
         ("DeepLncLoc", "3-mer 64"),
@@ -177,7 +178,7 @@ def main():
     # Worked example block on the left of Layer 1
     draw_rounded_box(ax, 0.45, L1_Y + 0.45, 2.7, 0.75, "#FFFFFF", "#555555", lw=0.8,
                      rounding=0.05)
-    ax.text(1.8, L1_Y + 1.00, "NEAT1 raw prediction",
+    ax.text(1.8, L1_Y + 1.00, "NORAD raw prediction",
             ha="center", fontsize=7.5, fontweight="bold", color=C_TEXT)
     ax.text(1.8, L1_Y + 0.72, f"P(stable) {APPROX} 0.52",
             ha="center", fontsize=8.5, color="#B03030", fontweight="bold")
@@ -225,10 +226,10 @@ def main():
                     color="#B0361F", fontweight="bold")
     ax_inset_t.text(1.55, 1.12, "stable", ha="center", fontsize=6.5,
                     color="#1F5E8E", fontweight="bold")
-    # Mark NEAT1 position
-    neat1_pos = 2.05
-    ax_inset_t.axvline(neat1_pos, color="#1F4E79", lw=1.3, linestyle="--")
-    ax_inset_t.text(neat1_pos + 0.08, 0.70, "NEAT1",
+    # Mark NORAD position
+    norad_pos = 2.05
+    ax_inset_t.axvline(norad_pos, color="#1F4E79", lw=1.3, linestyle="--")
+    ax_inset_t.text(norad_pos + 0.08, 0.70, "NORAD",
                     fontsize=7, color="#1F4E79", fontweight="bold",
                     ha="left", va="center")
     ax_inset_t.set_xlim(-1, 3)
@@ -261,7 +262,7 @@ def main():
     l_inset_bounds = [L_X + 0.20, L_Y + 0.28, L_W - 0.40, L_H - 0.58]
     ax_inset_l = ax.inset_axes(l_inset_bounds, transform=ax.transData)
     bin_names = ["cytoplasm", "nuclear", "chromatin"]
-    vals = [0.10, 0.55, 0.35]
+    vals = [0.65, 0.20, 0.15]
     colors_bar = ["#BFB2D8", "#8E6BB5", "#5A3C86"]
     xpos = np.arange(len(bin_names))
     ax_inset_l.bar(xpos, vals, color=colors_bar, edgecolor=C_LOCAL, lw=0.8)
@@ -276,8 +277,8 @@ def main():
             spine.set_linewidth(0.7)
         else:
             spine.set_visible(False)
-    # Highlight NEAT1's call above the nuclear bar (bar height 0.55 → label at 0.66)
-    ax_inset_l.text(1, 0.68, "NEAT1", ha="center", fontsize=7,
+    # Highlight NORAD's call above the cytoplasm bar (bar height 0.65 → label at 0.74)
+    ax_inset_l.text(0, 0.74, "NORAD", ha="center", fontsize=7,
                     color=C_LOCAL, fontweight="bold")
 
     # Localization data source label — placed just below header
@@ -288,13 +289,13 @@ def main():
     # Worked example block on the left of Layer 2
     draw_rounded_box(ax, 0.45, L2_Y + 0.35, 2.7, 1.35, "#FFFFFF", "#555555", lw=0.8,
                      rounding=0.05)
-    ax.text(1.8, L2_Y + 1.50, "NEAT1 measured priors",
+    ax.text(1.8, L2_Y + 1.50, "NORAD measured priors",
             ha="center", fontsize=7.5, fontweight="bold", color=C_TEXT)
     ax.text(1.8, L2_Y + 1.22, f"t{HALF}  {GTE}  5 h  (BRIC-seq)",
             ha="center", fontsize=8, color=C_TURNOVER, fontweight="bold")
-    ax.text(1.8, L2_Y + 0.92, "nuclear, paraspeckle",
+    ax.text(1.8, L2_Y + 0.92, "cytoplasmic, PUMILIO-bound",
             ha="center", fontsize=8, color=C_LOCAL, fontweight="bold")
-    ax.text(1.8, L2_Y + 0.62, "(fractionation + FISH)",
+    ax.text(1.8, L2_Y + 0.62, "(fractionation + CLIP)",
             ha="center", fontsize=7, fontstyle="italic", color="#777777")
 
     # Right-most legend for the 4-quadrant grid in Layer 3
@@ -338,10 +339,10 @@ def main():
                 fontsize=7.5, fontweight="bold", color="#555555")
 
     # Cells
-    # heatmap-ish probabilities for NEAT1 (strong on stable-nuclear)
+    # heatmap-ish probabilities for NORAD (strong on stable-cytoplasmic)
     cell_probs = [
-        [0.04, 0.10, 0.58],   # nuclear row (top)
-        [0.02, 0.05, 0.21],   # cytoplasmic row (bottom)
+        [0.02, 0.05, 0.21],   # nuclear row (top)
+        [0.04, 0.10, 0.58],   # cytoplasmic row (bottom)
     ]
     for ri, row in enumerate(rows):
         for ci, col in enumerate(cols):
@@ -358,9 +359,9 @@ def main():
                     label, ha="center", va="center",
                     fontsize=8.5, fontweight=fw, color=color)
 
-    # Outline best cell (nuclear × stable)
+    # Outline best cell (cytoplasmic × stable)
     best_x = grid_x0 + 2 * cell_w
-    best_y = grid_y0 + 1 * cell_h
+    best_y = grid_y0
     draw_rounded_box(ax, best_x - 0.03, best_y - 0.03, cell_w * 0.95 + 0.06,
                      cell_h * 0.92 + 0.06, "none", "#B03030", lw=1.8,
                      rounding=0.04)
@@ -371,10 +372,10 @@ def main():
     ax.text(12.08, L3_Y + 1.50, "biology-aware prediction",
             ha="center", fontsize=8.5, fontweight="bold", color="#6B4226")
     ax.text(9.75, L3_Y + 1.20,
-            f"NEAT1 {ARROW} nuclear, stable  (P = 0.58)",
+            f"NORAD {ARROW} cytoplasmic, stable  (P = 0.58)",
             ha="left", fontsize=8.5, color="#B03030", fontweight="bold")
     ax.text(9.75, L3_Y + 0.93,
-            "role: paraspeckle scaffold (consistent)",
+            "role: PUMILIO sequestration (consistent)",
             ha="left", fontsize=7.8, color="#333333")
     ax.text(9.75, L3_Y + 0.68,
             f"calibrated to cell-line-specific t{HALF} distribution",
@@ -386,15 +387,15 @@ def main():
     # Worked example block on the left of Layer 3
     draw_rounded_box(ax, 0.45, L3_Y + 0.35, 2.7, 1.35, "#FFFFFF", "#555555", lw=0.8,
                      rounding=0.05)
-    ax.text(1.8, L3_Y + 1.50, "NEAT1 final call", ha="center",
+    ax.text(1.8, L3_Y + 1.50, "NORAD final call", ha="center",
             fontsize=7.8, fontweight="bold", color=C_TEXT)
-    ax.text(1.8, L3_Y + 1.22, "nuclear x stable",
+    ax.text(1.8, L3_Y + 1.22, "cytoplasmic x stable",
             ha="center", fontsize=8.5, color="#B03030", fontweight="bold")
     ax.text(1.8, L3_Y + 0.98, "P = 0.58",
             ha="center", fontsize=8.5, color="#B03030", fontweight="bold")
     ax.text(1.8, L3_Y + 0.70, f"{APPROX} matches published",
             ha="center", fontsize=7, fontstyle="italic", color="#666666")
-    ax.text(1.8, L3_Y + 0.50, "paraspeckle biology",
+    ax.text(1.8, L3_Y + 0.50, "PUMILIO sequestration",
             ha="center", fontsize=7, fontstyle="italic", color="#666666")
 
     # Vertical flow arrows on the left connecting all three example blocks
@@ -408,9 +409,9 @@ def main():
 
     # Asterisk note for CPU substitutes
     ax.text(7.5, 0.05,
-            "* Phase 2 CPU-feasible substitutes (RiNALMo 650M -> 4-mer; Evo 7B -> ERNIE-RNA 86M; "
+            "* CPU-feasible proxies (RiNALMo 650M -> shallow CNN; Evo 7B -> ERNIE-RNA 86M; "
             "RhoFold+ -> ViennaRNA 2D). "
-            "Same framework applies to full-scale models in Phase 3.",
+            "Same framework applies to full-scale models when GPU resources are available.",
             ha="center", va="center",
             fontsize=7.5, fontstyle="italic", color="#666666")
 
